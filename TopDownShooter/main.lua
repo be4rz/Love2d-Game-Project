@@ -1,4 +1,6 @@
 function love.load()
+    math.randomseed(os.time())
+
     sprites = {}
     sprites.background = love.graphics.newImage('sprites/background.png')
     sprites.bullet = love.graphics.newImage('sprites/bullet.png')
@@ -10,23 +12,31 @@ function love.load()
     player.y = love.graphics.getHeight() / 2
     player.speed = 180
 
-    zombies = {}
+    myFont = love.graphics.newFont(30)
 
+    zombies = {}
     bullets = {}
+
+    gameState = 1
+    score = 0
+    maxTime = 2
+    timer = maxTime
 end
 
 function love.update(dt)
-    if love.keyboard.isDown("d") then
-        player.x = player.x + player.speed*dt
-    end
-    if love.keyboard.isDown("a") then
-        player.x = player.x - player.speed*dt
-    end
-    if love.keyboard.isDown("s") then
-        player.y = player.y + player.speed*dt
-    end
-    if love.keyboard.isDown("w") then
-        player.y = player.y - player.speed*dt
+    if gameState == 2 then
+        if love.keyboard.isDown("d") and player.x < love.graphics.getWidth() then
+            player.x = player.x + player.speed*dt
+        end
+        if love.keyboard.isDown("a") and player.x > 0 then
+            player.x = player.x - player.speed*dt
+        end
+        if love.keyboard.isDown("s") and player.y < love.graphics.getHeight() then
+            player.y = player.y + player.speed*dt
+        end
+        if love.keyboard.isDown("w") and player.y > 0 then
+            player.y = player.y - player.speed*dt
+        end
     end
 
     for i,z in ipairs(zombies) do
@@ -36,6 +46,9 @@ function love.update(dt)
         if distanceBetween(z.x,z.y,player.x,player.y) < 30 then
             for i,z in ipairs(zombies) do 
                 zombies[i] = nill
+                gameState = 1
+                player.x = love.graphics.getWidth() / 2
+                player.y = love.graphics.getHeight() / 2
             end
         end
     end
@@ -57,6 +70,7 @@ function love.update(dt)
             if distanceBetween(z.x,z.y,b.x,b.y) < 20 then 
                 z.dead = true
                 b.dead = true
+                score = score + 1
             end
         end
     end
@@ -75,12 +89,28 @@ function love.update(dt)
         end
     end
 
+    if gameState == 2 then
+        timer = timer - dt
+        if timer <= 0 then
+            spawnZombie()
+            maxTime = 0.95 * maxTime
+            timer = maxTime
+        end
+    end
+
     tempRotation = playerMouseAngle()
 end
 
 function love.draw()
     love.graphics.draw(sprites.background, 0, 0)
     -- love.graphics.draw(sprites.player, player.x, player.y, tempRotation)
+
+    if gameState == 1 then
+        love.graphics.setFont(myFont)
+        love.graphics.printf("Click anywhere to begin!", 0, 50, love.graphics.getWidth(), "center")
+    end
+    love.graphics.printf("Score: " .. score, 0, love.graphics.getHeight() - 100, love.graphics.getWidth(), "center")
+
     love.graphics.draw(sprites.player, player.x, player.y, tempRotation, nil, nil, sprites.player:getWidth()/2, sprites.player:getHeight()/2)
 
     for i,z in ipairs(zombies) do
@@ -99,7 +129,12 @@ function love.keypressed(key)
 end
 
 function love.mousepressed(x, y, button)
-    if button == 1 then
+    if gameState == 1 and button == 1 then
+        gameState = 2
+        maxTime = 2
+        timer = maxTime
+        score = 0
+    elseif gameState == 2 and button == 1 then
         spawnBullet()
     end
 end
@@ -114,10 +149,26 @@ end
 
 function spawnZombie()
     local zombie = {}
-    zombie.x = math.random(0, love.graphics.getWidth())
-    zombie.y = math.random(0, love.graphics.getHeight())
+    zombie.x = 0
+    zombie.y = 0
     zombie.speed = 140
     zombie.dead = false
+
+    local side = math.random(1, 4)
+    if side == 1 then
+        zombie.x = -30
+        zombie.y = math.random(0, love.graphics.getHeight())
+    elseif side == 2 then
+        zombie.x = love.graphics.getWidth() + 30
+        zombie.y = math.random(0, love.graphics.getHeight())
+    elseif side == 3 then
+        zombie.x = math.random(0, love.graphics.getWidth())
+        zombie.y =-30
+    elseif side == 2 then
+        zombie.x = math.random(0, love.graphics.getWidth())
+        zombie.y = love.graphics.getHeight() + 30
+    end
+
     table.insert(zombies,zombie)
 end
 
